@@ -4,10 +4,27 @@ Portable RetinaFace in Pytorch. Easy to use as loss function for bounding boxes 
 **Prerequisites:**
 
 - Python 3.x with argparse, torch, and PIL (Pillow)
-- RetinaFaceDetector class (in module 'detector')
-- RetinaFaceLoss class (in module 'loss')
 - Trained RetinaFace model download from [Google Drive](https://drive.google.com/open?id=11UGV3nbVv1x9IC--_tK3Uxf7hA6rlbsS) (default path: './weights/Resnet50_Final.pth')
 
+## Example
+
+```python
+from loss import RetinaFaceLoss
+
+detector = RetinaFaceDetector()
+
+# Preprocess image
+img_A, _, _, _ = detector.preprocess_image("./data/A.jpg")
+img_B, _, _, _ = detector.preprocess_image("./data/B.jpg")
+
+loss = RetinaFaceLoss()
+bbox_loss = loss.bounding_box_loss(img_A, img_B)
+print("Bounding box loss: ", bbox_loss)
+
+# Landmark loss
+landmark_loss = loss.landmark_loss(img_A, img_B)
+print("Landmark loss: ", landmark_loss)
+```
 **Instructions for running run_loss.py:**
 
 **Steps:**
