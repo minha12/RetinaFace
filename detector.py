@@ -323,7 +323,7 @@ class RetinaFace(nn.Module):
             backbone = MobileNetV1()
             if cfg["pretrain"]:
                 checkpoint = torch.load(
-                    "./weights/mobilenetV1X0.25_pretrain.tar",
+                    "./RetinaFace/weights/mobilenetV1X0.25_pretrain.tar",
                     map_location=torch.device("cpu"),
                 )
                 from collections import OrderedDict
@@ -452,9 +452,9 @@ cfg_re50 = {
 class RetinaFaceDetector:
     def __init__(
         self,
-        trained_model="./weights/Resnet50_Final.pth",
+        trained_model="./criteria/RetinaFace/weights/Resnet50_Final.pth",
         network="resnet50",
-        gpu=False,
+        gpu=True,
         confidence_threshold=0.02,
         top_k=5000,
         nms_threshold=0.4,
@@ -477,10 +477,13 @@ class RetinaFaceDetector:
         elif self.network == "resnet50":
             self.cfg = cfg_re50
         self.net = RetinaFace(cfg=self.cfg, phase="test")
+        # print current working directory
+
         self.net = self.load_model(self.net, self.trained_model, self.gpu)
         self.net.eval()
         self.device = torch.device("cpu" if not self.gpu else "cuda")
         self.net = self.net.to(self.device)
+        # print("Finished loading model to ", self.device)
 
     def load_model(self, model, pretrained_path, load_to_gpu):
         # Load pretrained model weights
@@ -515,21 +518,38 @@ class RetinaFaceDetector:
         scale = scale.to(self.device)
         return img, im_height, im_width, scale
 
-    def detect_faces(self, image):
+    def _preprocess(self, image):
+        image = (image + 1) / 2  # Denormalize
+        image = image * 255  # Rescale to 0-255
+        mean_tensor = (
+            torch.Tensor([123, 117, 104]).view(1, 3, 1, 1).to(self.device)
+        )  # normalize mean
+        image -= mean_tensor
+        return image
+
+    def detect_faces(self, image, need_preprocess=False):
+        if need_preprocess:
+            image = self._preprocess(image)
         # Perform face detection using the model
         loc, conf, landms = self.net(image)  # Forward pass
+        # if need_preprocess:
+        #     return landms
+        # print(loc.shape, conf.shape, landms.shape)
         priorbox = PriorBox(self.cfg, image_size=(image.shape[2], image.shape[3]))
+        # print(priorbox)
         priors = priorbox.forward()
+
         priors = priors.to(self.device)
         prior_data = priors.data
-        boxes = decode(loc.data.squeeze(0), prior_data, self.cfg["variance"])
+        boxes = decode(loc.squeeze(0), prior_data, self.cfg["variance"])
+
         scale = torch.Tensor(
-            [image.shape[1], image.shape[0], image.shape[1], image.shape[0]]
+            [image.shape[3], image.shape[2], image.shape[3], image.shape[2]]
         ).to(self.device)
 
         boxes = boxes * scale / self.resize
         scores = conf.squeeze(0)[:, 1]
-        landms = decode_landm(landms.data.squeeze(0), prior_data, self.cfg["variance"])
+        landms = decode_landm(landms.squeeze(0), prior_data, self.cfg["variance"])
         scale1 = torch.Tensor(
             [
                 image.shape[3],
@@ -554,4 +574,5 @@ class RetinaFaceDetector:
         # Keep top-K before NMS
         keep = torchvision.ops.nms(boxes, scores, self.nms_threshold)
         dets = torch.cat((boxes[keep], scores[keep, None], landms[keep]), dim=1)
+        # print(dets)
         return dets
