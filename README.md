@@ -4,7 +4,7 @@ Portable RetinaFace in Pytorch. Easy to use as loss function for bounding boxes 
 **Prerequisites:**
 
 - Python 3.x with argparse, torch, and PIL (Pillow)
-- Trained RetinaFace model download from [Google Drive](https://drive.google.com/open?id=11UGV3nbVv1x9IC--_tK3Uxf7hA6rlbsS) (default path: './weights/Resnet50_Final.pth')
+- Trained RetinaFace model download from [Google Drive](https://drive.google.com/file/d/1fE4aVzeKbCCuZOo6VM639wNOG2v3xavV/view?usp=drive_link) (default path: './weights/Resnet50_Final.pth')
 
 ## Example
 
